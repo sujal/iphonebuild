@@ -1,0 +1,14 @@
+iphonebuild.sh
+
+This is a simple build script that was originally written by Frank Szczerba at 
+http://carpe-cocoa.com/2009-05-24/iphone-application-packaging/
+
+My goals for this are simple:
+
+- add better support for spaces in Targets & Build Configurations
+- copy the provisioning profile used for the build to the output directory
+- support SVN & Perforce in addition to Git
+
+As of right now, all but the Perforce support is in there.
+
+My changes might be buggy (though it's been working great for me :-) ), so please report issues.  Thanks.
