@@ -88,7 +88,7 @@ svn_tag() {
 }
 
 svn_fullvers() {
-	echo svn info | grep Revision | awk '{print $2}'
+	svn info | grep Revision | awk '{print $2}'
 }
 
 git_status() {
@@ -110,7 +110,7 @@ git_tag() {
 }
 
 git_fullvers() {
-	echo git rev-parse HEAD 2>/dev/null
+	git rev-parse HEAD 2>/dev/null
 }
 
 if [ -d '.svn' ]; then
@@ -225,8 +225,9 @@ if [ "$nocommit" -eq "0" ] ; then
 	done
 else
 	# not committing, use the SHA1 as the version
-	fullvers=`${VCPREFIX}_fullvers`
-
+	TAGFUNCTION="${VCPREFIX}_fullvers"
+	fullvers=`$TAGFUNCTION`
+	
 	# if it's dirty, append the date, time, and timezone
 	if [ "$isdirty" -ne 0 ] ; then
 		fullvers="$fullvers+ $(date +%F\ %T\ %Z)"
