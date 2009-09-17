@@ -9,6 +9,7 @@ My goals for this are simple:
 - copy the provisioning profile used for the build to the output directory
 - support SVN & Perforce in addition to Git
 
-As of right now, all but the Perforce support is in there.
+As of right now, all but the Perforce support is in there.  I also haven't decided on a good way to
+abstract tagging for SVN, so I simply skipped support for it. Open to suggestions, so let me know if you have one.
 
 My changes might be buggy (though it's been working great for me :-) ), so please report issues.  Thanks.
