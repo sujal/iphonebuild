@@ -88,7 +88,7 @@ svn_tag() {
 }
 
 svn_fullvers() {
-	svn info | grep Revision | awk '{print $2}'
+	svn info | grep Revision | awk '{print "SVN"$2}'
 }
 
 git_status() {
@@ -138,7 +138,7 @@ xcodeconfigs=$(xcodebuild -list | sed '
 		/^[[:space:]]*$/				d
 		s/[[:space:]]*\([^[:space:]].*\).*/\1/
 		s/[[:space:]][(]Active[)]$//
-	')
+	'| perl -e '$a="";while(<>){$a.=$_;} $a=~s/\n/:/mg; print $a;')
 
 xcodetargets="$(xcodebuild -list | sed '
 		/Targets:/,/^[[:space:]]*$/			!d
@@ -162,7 +162,12 @@ while [ -n "$*" ]; do
 		-n) nocommit=1 ; shift ;;
 		-*) usage ;;
 		*)	if echo $xcodeconfigs | grep -wq "$1" ; then
-				configs="$configs $1"; shift 
+				if [ -z "$configs" ]; then
+					configs="$1"
+				else
+					configs="${configs}:$1";
+				fi
+				shift 
 			else
 				usage "Invalid config '$1'"
 			fi
@@ -174,6 +179,8 @@ done
 if [ -z "$configs" ] ; then
 	configs=$xcodeconfigs
 fi
+
+echo "$configs"
 
 # check for modified files, bail if found
 isdirty=0
@@ -241,11 +248,11 @@ printf "Created:" > $logname
 
 # build and package each requested config
 SAVEIFS=$IFS
-IFS=$(echo -en "\n\b")
+IFS=$':'
 for config in $configs ; do
 	config=`echo $config | sed 's/^[[:space:]]//'`
+	
 	echo "CONFIG=$config"
-	xcodebuild -alltargets -parallelizeTargets -configuration "$config" clean build || die "Build failed"
 
 	# packaged output goes in Releases if tagged, Development otherwise
 	if [ "$nocommit" -eq "0" ] ; then
@@ -255,6 +262,8 @@ for config in $configs ; do
 	fi
 	releasedir="$basedir/$config/$fullvers"
 	mkdir -p "$releasedir"
+
+	(xcodebuild -alltargets -parallelizeTargets -configuration "$config" clean build | tee "$basedir/xcodebuild.log") || die "Build failed"
 
 	# Package each app
 	echo "$xcodetargets" | while read basename ; do
@@ -301,7 +310,18 @@ for config in $configs ; do
 		fi
 		# update a symlink to the latest version
 		(cd "$basedir/$config" ; ln -sf "$fullvers/$basename.$ext")
+		
+		# Identify the provisioning profile used for this app
+		provisioning_file=`cat $basedir/xcodebuild.log | grep ProcessProductPackaging | grep "Provisioning Profiles" | grep "$basename.app" | sed 's/^.*\/\([A-F0-9-]\{36\}\).*/\1/'`
+		cp "$HOME/Library/MobileDevice/Provisioning Profiles/${provisioning_file}.mobileprovision" "$releasedir/${provisioning_file}.mobileprovision"
+		
+		#update a symlink to the latest provisioning profile
+		(cd "$basedir/$config" ; ln -sf "$fullvers/${provisioning_file}.mobileprovision")
+		
 	done
+	
+	rm "$basedir/xcodebuild.log"
+	
 done
 IFS=$SAVEIFS
 
